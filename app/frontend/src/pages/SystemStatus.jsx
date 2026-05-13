@@ -7,6 +7,7 @@ function SystemStatus() {
     loading: true,
     status: "",
     service: "",
+    database: "",
     uptime: null,
     responseTime: null,
     error: ""
@@ -34,6 +35,7 @@ function SystemStatus() {
           setHealth({
             loading: false,
             status: data.status,
+            database: data.database,
             service: data.service,
             uptime: data.uptime,
             responseTime: elapsedMs,
@@ -45,6 +47,7 @@ function SystemStatus() {
           setHealth({
             loading: false,
             status: "unavailable",
+            database: "unhealthy",
             service: "cloudstore-backend",
             uptime: null,
             responseTime: error.elapsedMs || null,
@@ -123,6 +126,12 @@ function SystemStatus() {
           <strong>{health.loading ? "Checking..." : health.status}</strong>
           <span>{health.service || "cloudstore-backend"}</span>
           <small>API: {API_BASE_URL}</small>
+        </StatusCard>
+
+        <StatusCard title="Database Health" tone={health.database === "healthy" ? "healthy" : "warning"}>
+          <strong>{health.loading ? "Checking..." : health.database || "unknown"}</strong>
+          <span>PostgreSQL connection</span>
+          <small>Reported by /health</small>
         </StatusCard>
 
         <StatusCard title="Response Time">

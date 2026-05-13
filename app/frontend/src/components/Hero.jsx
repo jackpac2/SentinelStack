@@ -11,16 +11,11 @@ function Hero({ onShopNow }) {
       </div>
 
       <div className="hero-scene" aria-hidden="true">
-        <span className="cloud puff-one" />
-        <span className="cloud puff-two" />
-        <span className="device laptop">
-          <i />
-        </span>
-        <span className="device headset" />
-        <span className="device speaker">
-          <i />
-        </span>
-        <span className="device watch" />
+        <img
+          src="/images/hero/cloudstore-hero.png"
+          alt=""
+          loading="eager"
+        />
       </div>
     </section>
   );

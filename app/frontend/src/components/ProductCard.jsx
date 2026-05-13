@@ -1,22 +1,29 @@
-const ratings = {
-  "fallback-001": [5, 128],
-  "fallback-002": [5, 86],
-  "fallback-003": [4, 64],
-  "fallback-004": [5, 95],
-  "fallback-005": [4, 72],
-  "fallback-006": [5, 110]
-};
-
 function ProductCard({ product, onAddToCart }) {
-  const [rating, reviews] = ratings[product.id] || [5, 48];
+  const rating = Number(product.rating || 0);
+  const reviewCount = Number(product.reviewCount || 0);
+  const roundedRating = Math.max(0, Math.min(5, Math.round(rating)));
+  const imageUrl = product.imageUrl || "";
+  const showImage =
+    typeof imageUrl === "string" && imageUrl.trim().length > 0;
+  const resolvedImageUrl =
+    imageUrl.startsWith("http") ||
+    imageUrl.startsWith("/") ||
+    imageUrl.startsWith("data:")
+      ? imageUrl
+      : `/images/products/${imageUrl}.png`;
 
   return (
     <article className="product-card">
       <div className="product-visual">
         <span className="favorite">Heart</span>
-        <span className="product-art">{product.name.split(" ")[0]}</span>
+        {showImage ? (
+          <img src={resolvedImageUrl} alt={product.name} />
+        ) : (
+          <span className="product-art">{product.name.split(" ")[0]}</span>
+        )}
       </div>
       <div className="product-body">
+        <span className="category-pill">{product.category}</span>
         <strong>{product.name}</strong>
         <p>{product.description}</p>
         <div className="price-row">
@@ -24,8 +31,8 @@ function ProductCard({ product, onAddToCart }) {
           <span>Stock {product.stock}</span>
         </div>
         <div className="rating-row">
-          <span>{"★".repeat(rating)}{"☆".repeat(5 - rating)}</span>
-          <small>({reviews})</small>
+          <span>{"*".repeat(roundedRating)}{"-".repeat(5 - roundedRating)}</span>
+          <small>{rating.toFixed(1)} ({reviewCount})</small>
         </div>
         <button type="button" onClick={() => onAddToCart(product)}>
           Add to Cart

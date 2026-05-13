@@ -4,14 +4,14 @@ import CategoryCard from "../components/CategoryCard";
 import ProductCard from "../components/ProductCard";
 
 const categories = [
-  ["Phone", "Electronics"],
-  ["Wear", "Fashion"],
-  ["Home", "Home & Living"],
-  ["Glow", "Beauty"],
-  ["Play", "Sports"],
-  ["Game", "Toys & Games"],
-  ["Desk", "Office"],
-  ["Drive", "Automotive"]
+  { label: "Electronics", image: "/images/categories/electronics.png" },
+  { label: "Fashion", image: "/images/categories/fashion.png" },
+  { label: "Home & Living", image: "/images/categories/home-living.png" },
+  { label: "Beauty", image: "/images/categories/beauty.png" },
+  { label: "Sports", image: "/images/categories/sports.png" },
+  { label: "Toys & Games", image: "/images/categories/toys-games.png" },
+  { label: "Office", image: "/images/categories/office.png" },
+  { label: "Automotive", image: "/images/categories/automotive.png" }
 ];
 
 function Home({ products, loading, error, onAddToCart, onNavigate }) {
@@ -28,8 +28,12 @@ function Home({ products, loading, error, onAddToCart, onNavigate }) {
           </button>
         </div>
         <div className="category-grid">
-          {categories.map(([icon, label]) => (
-            <CategoryCard icon={icon} label={label} key={label} />
+          {categories.map((category) => (
+            <CategoryCard
+              image={category.image}
+              label={category.label}
+              key={category.label}
+            />
           ))}
         </div>
       </section>

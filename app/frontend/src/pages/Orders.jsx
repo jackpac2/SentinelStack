@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { apiClient } from "../api/client";
 import OrderCard from "../components/OrderCard";
 
-function Orders() {
+function Orders({ refreshKey = 0 }) {
   const [state, setState] = useState({
     loading: true,
     orders: [],
@@ -38,7 +38,7 @@ function Orders() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [refreshKey]);
 
   return (
     <section className="page-card">

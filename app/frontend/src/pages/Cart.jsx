@@ -7,6 +7,7 @@ function Cart({
   onRemove,
   onQuantityChange,
   onClearCart,
+  onOrderCreated,
   onNavigate
 }) {
   const [checkoutState, setCheckoutState] = useState({
@@ -28,7 +29,8 @@ function Cart({
         items: items.map((item) => ({
           productId: item.id,
           quantity: item.quantity
-        }))
+        })),
+        totalAmount: Number(total.toFixed(2))
       });
 
       setCheckoutState({
@@ -37,6 +39,7 @@ function Cart({
         error: ""
       });
       onClearCart();
+      onOrderCreated();
     } catch (error) {
       setCheckoutState({
         loading: false,

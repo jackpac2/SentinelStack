@@ -1,7 +1,11 @@
-function CategoryCard({ icon, label }) {
+function CategoryCard({ image, label }) {
   return (
     <article className="category-card">
-      <span>{icon}</span>
+      {image ? (
+        <img src={image} alt="" loading="lazy" />
+      ) : (
+        <span>{label.slice(0, 2)}</span>
+      )}
       <strong>{label}</strong>
     </article>
   );

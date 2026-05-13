@@ -17,7 +17,9 @@ const fallbackProducts = [
     price: 59.99,
     category: "Electronics",
     stock: 28,
-    imageUrl: ""
+    imageUrl: "cloudbuds-pro",
+    rating: 4.8,
+    reviewCount: 128
   },
   {
     id: "fallback-002",
@@ -26,7 +28,9 @@ const fallbackProducts = [
     price: 49.99,
     category: "Fashion",
     stock: 34,
-    imageUrl: ""
+    imageUrl: "cloud-hoodie",
+    rating: 4.7,
+    reviewCount: 86
   },
   {
     id: "fallback-003",
@@ -35,7 +39,9 @@ const fallbackProducts = [
     price: 39.99,
     category: "Home & Living",
     stock: 19,
-    imageUrl: ""
+    imageUrl: "cloudmist-humidifier",
+    rating: 4.6,
+    reviewCount: 64
   },
   {
     id: "fallback-004",
@@ -44,7 +50,9 @@ const fallbackProducts = [
     price: 89.99,
     category: "Electronics",
     stock: 22,
-    imageUrl: ""
+    imageUrl: "cloudwatch-lite",
+    rating: 4.9,
+    reviewCount: 95
   },
   {
     id: "fallback-005",
@@ -53,7 +61,9 @@ const fallbackProducts = [
     price: 54.99,
     category: "Office",
     stock: 26,
-    imageUrl: ""
+    imageUrl: "cloudpack-backpack",
+    rating: 4.7,
+    reviewCount: 72
   },
   {
     id: "fallback-006",
@@ -62,7 +72,9 @@ const fallbackProducts = [
     price: 69.99,
     category: "Sports",
     stock: 31,
-    imageUrl: ""
+    imageUrl: "cloudstep-sneakers",
+    rating: 4.8,
+    reviewCount: 110
   }
 ];
 
@@ -77,6 +89,7 @@ function App() {
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [cartOpen, setCartOpen] = useState(false);
+  const [ordersRefreshKey, setOrdersRefreshKey] = useState(0);
 
   useEffect(() => {
     let ignore = false;
@@ -84,8 +97,10 @@ function App() {
     const loadProducts = async () => {
       try {
         const { data } = await apiClient.getProducts();
-        if (!ignore && Array.isArray(data.products) && data.products.length > 0) {
-          setProducts(data.products);
+        const apiProducts = Array.isArray(data) ? data : data.products;
+
+        if (!ignore && Array.isArray(apiProducts)) {
+          setProducts(apiProducts);
           setProductsState({ loading: false, error: "" });
         }
       } catch (error) {
@@ -184,11 +199,12 @@ function App() {
             onRemove={removeFromCart}
             onQuantityChange={updateQuantity}
             onClearCart={clearCart}
+            onOrderCreated={() => setOrdersRefreshKey((key) => key + 1)}
             onNavigate={navigateTo}
           />
         );
       case "orders":
-        return <Orders />;
+        return <Orders refreshKey={ordersRefreshKey} />;
       case "status":
         return <SystemStatus />;
       case "home":

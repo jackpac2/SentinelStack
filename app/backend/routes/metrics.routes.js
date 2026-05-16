@@ -1,8 +1,8 @@
 const express = require("express");
-const { getMetricsPlaceholder } = require("../controllers/metrics.controller");
+const { getMetrics } = require("../controllers/metrics.controller");
 
 const router = express.Router();
 
-router.get("/metrics", getMetricsPlaceholder);
+router.get("/metrics", getMetrics);
 
 module.exports = router;

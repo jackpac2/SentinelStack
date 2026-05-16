@@ -1,9 +1,14 @@
-const getMetricsPlaceholder = (req, res) => {
-  res.json({
-    message: "Metrics will be added in the next phase."
-  });
+const { register } = require("../metrics/registry");
+
+const getMetrics = async (req, res, next) => {
+  try {
+    res.set("Content-Type", register.contentType);
+    res.send(await register.metrics());
+  } catch (error) {
+    next(error);
+  }
 };
 
 module.exports = {
-  getMetricsPlaceholder
+  getMetrics
 };

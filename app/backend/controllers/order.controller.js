@@ -1,14 +1,23 @@
-const orders = require("../data/orders");
+const {
+  getAllOrders,
+  createOrder: createDatabaseOrder
+} = require("../models/orderModel");
 
-const getOrders = (req, res) => {
-  res.json({
-    count: orders.length,
-    orders
-  });
+const getOrders = async (req, res, next) => {
+  try {
+    const orders = await getAllOrders();
+    res.json({
+      count: orders.length,
+      orders
+    });
+  } catch (error) {
+    console.error("Failed to fetch orders:", error.message);
+    next(error);
+  }
 };
 
-const createOrder = (req, res, next) => {
-  const { customerName, items } = req.body || {};
+const createOrder = async (req, res, next) => {
+  const { customerName, items, totalAmount } = req.body || {};
 
   if (!customerName || typeof customerName !== "string") {
     const error = new Error("customerName is required and must be a string.");
@@ -22,20 +31,41 @@ const createOrder = (req, res, next) => {
     return next(error);
   }
 
-  const order = {
-    id: `ord-${String(orders.length + 1).padStart(3, "0")}`,
-    customerName: customerName.trim(),
-    items,
-    status: "received",
-    createdAt: new Date().toISOString()
-  };
+  const invalidItem = items.find((item) => {
+    const productId = Number(item.productId);
+    const quantity = Number(item.quantity);
 
-  orders.push(order);
-
-  res.status(201).json({
-    message: "Order created successfully.",
-    order
+    return (
+      !Number.isInteger(productId) ||
+      productId <= 0 ||
+      !Number.isInteger(quantity) ||
+      quantity <= 0
+    );
   });
+
+  if (invalidItem) {
+    const error = new Error(
+      "Each item must include a valid numeric productId and positive quantity."
+    );
+    error.statusCode = 400;
+    return next(error);
+  }
+
+  try {
+    const order = await createDatabaseOrder({
+      customerName: customerName.trim(),
+      items,
+      totalAmount
+    });
+
+    res.status(201).json({
+      message: "Order created successfully.",
+      order
+    });
+  } catch (error) {
+    console.error("Failed to create order:", error.message);
+    next(error);
+  }
 };
 
 module.exports = {

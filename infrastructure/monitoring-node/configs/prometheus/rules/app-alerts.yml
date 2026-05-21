@@ -1,0 +1,50 @@
+groups:
+  - name: sentinelstack-app
+    rules:
+      - alert: SentinelStackBackendDown
+        expr: up{job="sentinelstack-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: backend
+        annotations:
+          summary: SentinelStack backend is down
+          description: Prometheus cannot scrape the backend /metrics endpoint on {{ $labels.instance }}.
+
+      - alert: SentinelStackHighErrorRate
+        expr: |
+          sum(rate(http_requests_total{job="sentinelstack-backend",status_code=~"5.."}[5m]))
+          /
+          clamp_min(sum(rate(http_requests_total{job="sentinelstack-backend"}[5m])), 1)
+          > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          service: backend
+        annotations:
+          summary: SentinelStack backend 5xx rate is high
+          description: More than 5% of backend requests are returning 5xx responses.
+
+      - alert: SentinelStackHighP95Latency
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(http_request_duration_seconds_bucket{job="sentinelstack-backend"}[5m])) by (le)
+          ) > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: backend
+        annotations:
+          summary: SentinelStack backend p95 latency is high
+          description: Backend p95 request latency is above 1 second.
+
+      - alert: SentinelStackCadvisorDown
+        expr: up{job="sentinelstack-cadvisor"} == 0
+        for: 1m
+        labels:
+          severity: warning
+          service: cadvisor
+        annotations:
+          summary: SentinelStack cAdvisor is down
+          description: Prometheus cannot scrape cAdvisor metrics on {{ $labels.instance }}.

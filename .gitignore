@@ -49,3 +49,7 @@ test-results/
 # Temporary files
 tmp/
 temp/
+
+# Generated deployment configs
+infrastructure/monitoring-node/configs/prometheus/prometheus.yml
+infrastructure/app-node/configs/promtail/config.yml

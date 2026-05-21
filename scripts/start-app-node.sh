@@ -28,6 +28,37 @@ if [ ! -f "${ENV_FILE}" ]; then
   echo "Review database credentials before production use."
 fi
 
+set_env_value() {
+  local key="$1"
+  local value="$2"
+  local file="$3"
+
+  if [ -z "${value}" ]; then
+    return
+  fi
+
+  if grep -q "^${key}=" "${file}"; then
+    sed -i "s|^${key}=.*|${key}=${value}|" "${file}"
+  else
+    printf '\n%s=%s\n' "${key}" "${value}" >> "${file}"
+  fi
+}
+
+ensure_env_value() {
+  local key="$1"
+  local value="$2"
+  local file="$3"
+
+  if ! grep -q "^${key}=" "${file}"; then
+    printf '\n%s=%s\n' "${key}" "${value}" >> "${file}"
+  fi
+}
+
+set_env_value "GHCR_OWNER" "${GHCR_OWNER:-}" "${ENV_FILE}"
+set_env_value "IMAGE_TAG" "${IMAGE_TAG:-}" "${ENV_FILE}"
+ensure_env_value "GHCR_OWNER" "your-github-username" "${ENV_FILE}"
+ensure_env_value "IMAGE_TAG" "latest" "${ENV_FILE}"
+
 echo "Generating app config for MONITORING_HOST=${MONITORING_HOST}"
 "${REPO_ROOT}/scripts/generate-app-configs.sh"
 
@@ -42,7 +73,12 @@ fi
 "${DOCKER_COMPOSE[@]}" \
   --env-file infrastructure/app-node/.env \
   -f infrastructure/app-node/docker-compose.yml \
-  up -d --build
+  pull || true
+
+"${DOCKER_COMPOSE[@]}" \
+  --env-file infrastructure/app-node/.env \
+  -f infrastructure/app-node/docker-compose.yml \
+  up -d
 
 echo "App node started."
 echo "App: http://APP_EC2_PUBLIC_IP"

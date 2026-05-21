@@ -1,0 +1,58 @@
+name: Manual Teardown
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Which node to tear down
+        type: choice
+        options:
+          - app
+          - monitoring
+          - both
+        default: both
+
+jobs:
+  teardown-app:
+    name: Tear down app node
+    runs-on: ubuntu-latest
+    if: github.event.inputs.target == 'app' || github.event.inputs.target == 'both'
+    steps:
+      - name: Stop app stack and remove volumes
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.APP_EC2_HOST }}
+          username: ${{ secrets.APP_EC2_USER }}
+          key: ${{ secrets.APP_EC2_SSH_KEY }}
+          script: |
+            set -e
+            echo "WARNING: This will stop the app stack and delete Docker volumes. It will not delete repo files or images."
+            REPO_PATH="${{ secrets.APP_REPO_PATH }}"
+            if [ -z "$REPO_PATH" ]; then REPO_PATH="$HOME/sentinelstack"; fi
+            cd "$REPO_PATH"
+            docker compose \
+              --env-file infrastructure/app-node/.env \
+              -f infrastructure/app-node/docker-compose.yml \
+              down -v
+
+  teardown-monitoring:
+    name: Tear down monitoring node
+    runs-on: ubuntu-latest
+    if: github.event.inputs.target == 'monitoring' || github.event.inputs.target == 'both'
+    steps:
+      - name: Stop monitoring stack and remove volumes
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.MONITORING_EC2_HOST }}
+          username: ${{ secrets.MONITORING_EC2_USER }}
+          key: ${{ secrets.MONITORING_EC2_SSH_KEY }}
+          script: |
+            set -e
+            echo "WARNING: This will stop the monitoring stack and delete Docker volumes. It will not delete repo files or images."
+            REPO_PATH="${{ secrets.MONITORING_REPO_PATH }}"
+            if [ -z "$REPO_PATH" ]; then REPO_PATH="$HOME/sentinelstack"; fi
+            cd "$REPO_PATH"
+            docker compose \
+              --env-file infrastructure/monitoring-node/.env \
+              -f infrastructure/monitoring-node/docker-compose.yml \
+              down -v

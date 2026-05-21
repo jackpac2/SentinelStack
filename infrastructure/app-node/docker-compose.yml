@@ -40,10 +40,7 @@ services:
       - app_network
 
   backend:
-    image: sentinelstack-backend:local
-    build:
-      context: ../../app/backend
-      dockerfile: Dockerfile
+    image: ghcr.io/${GHCR_OWNER}/sentinelstack-backend:${IMAGE_TAG:-latest}
     container_name: sentinelstack-backend
     restart: unless-stopped
     environment:
@@ -62,12 +59,7 @@ services:
       - app_network
 
   frontend:
-    image: sentinelstack-frontend:local
-    build:
-      context: ../..
-      dockerfile: app/frontend/Dockerfile
-      args:
-        VITE_API_BASE_URL: /api
+    image: ghcr.io/${GHCR_OWNER}/sentinelstack-frontend:${IMAGE_TAG:-latest}
     container_name: sentinelstack-frontend
     restart: unless-stopped
     expose:

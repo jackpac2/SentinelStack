@@ -4,7 +4,7 @@
   "tags": ["sentinelstack", "devops", "observability"],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "refresh": "10s",
   "time": { "from": "now-1h", "to": "now" },
   "editable": true,
@@ -17,11 +17,11 @@
       "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
       "fieldConfig": { "defaults": { "decimals": 0, "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] } }, "overrides": [] },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "textMode": "auto" },
-      "targets": [{ "expr": "up{job=~\".*backend.*|sentinelstack-backend\"}", "legendFormat": "{{ instance }}", "refId": "A" }]
+      "targets": [{ "expr": "up{job=~\".*backend.*\"}", "legendFormat": "{{ instance }}", "refId": "A" }]
     },
     {
       "id": 2,
-      "title": "Request Rate",
+      "title": "Total Request Rate",
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "Prometheus" },
       "gridPos": { "h": 5, "w": 9, "x": 6, "y": 0 },
@@ -30,72 +30,90 @@
     },
     {
       "id": 3,
-      "title": "Error Rate",
+      "title": "Total 5xx Error Rate",
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "Prometheus" },
       "gridPos": { "h": 5, "w": 9, "x": 15, "y": 0 },
       "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
-      "targets": [{ "expr": "sum(rate(http_requests_total{status_code=~\"5..\"}[5m]))", "legendFormat": "5xx/sec", "refId": "A" }]
+      "targets": [
+        { "expr": "sum(rate(http_requests_total{status_code=~\"5..\"}[5m]))", "legendFormat": "status_code 5xx", "refId": "A" },
+        { "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m]))", "legendFormat": "status 5xx fallback", "refId": "B" }
+      ]
     },
     {
       "id": 4,
-      "title": "Request Rate by Route",
+      "title": "Request Rate by Method",
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "Prometheus" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 5 },
       "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
-      "targets": [{ "expr": "sum by(route) (rate(http_requests_total[5m]))", "legendFormat": "{{ route }}", "refId": "A" }]
+      "targets": [{ "expr": "sum by (method) (rate(http_requests_total[5m]))", "legendFormat": "{{ method }}", "refId": "A" }]
     },
     {
       "id": 5,
-      "title": "Error Rate by Route",
+      "title": "Request Rate by Route",
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "Prometheus" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 5 },
       "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
-      "targets": [{ "expr": "sum by(route) (rate(http_requests_total{status_code=~\"5..\"}[5m]))", "legendFormat": "{{ route }}", "refId": "A" }]
+      "targets": [
+        { "expr": "sum by (route) (rate(http_requests_total[5m]))", "legendFormat": "{{ route }}", "refId": "A" },
+        { "expr": "sum(rate(http_requests_total[5m]))", "legendFormat": "all routes fallback", "refId": "B" }
+      ]
     },
     {
       "id": 6,
+      "title": "Status Code Breakdown",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 5 },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "targets": [
+        { "expr": "sum by (status_code) (rate(http_requests_total[5m]))", "legendFormat": "{{ status_code }}", "refId": "A" },
+        { "expr": "sum by (status) (rate(http_requests_total[5m]))", "legendFormat": "{{ status }} fallback", "refId": "B" }
+      ]
+    },
+    {
+      "id": 7,
       "title": "P95 Latency",
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "Prometheus" },
-      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 13 },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 12 },
       "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
       "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "p95", "refId": "A" }]
     },
     {
-      "id": 7,
-      "title": "P99 Latency",
+      "id": 8,
+      "title": "Average Latency",
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "Prometheus" },
-      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 13 },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 12 },
       "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
-      "targets": [{ "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "p99", "refId": "A" }]
-    },
-    {
-      "id": 8,
-      "title": "Orders Created (if instrumented)",
-      "type": "stat",
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
-      "gridPos": { "h": 5, "w": 8, "x": 0, "y": 20 },
-      "targets": [{ "expr": "orders_created_total", "legendFormat": "orders", "refId": "A" }]
+      "targets": [{ "expr": "rate(http_request_duration_seconds_sum[5m]) / rate(http_request_duration_seconds_count[5m])", "legendFormat": "avg", "refId": "A" }]
     },
     {
       "id": 9,
-      "title": "Checkout Failures (if instrumented)",
+      "title": "Orders Created (if instrumented)",
       "type": "stat",
       "datasource": { "type": "prometheus", "uid": "Prometheus" },
-      "gridPos": { "h": 5, "w": 8, "x": 8, "y": 20 },
-      "targets": [{ "expr": "checkout_failures_total", "legendFormat": "failures", "refId": "A" }]
+      "gridPos": { "h": 5, "w": 8, "x": 0, "y": 19 },
+      "targets": [{ "expr": "orders_created_total", "legendFormat": "orders", "refId": "A" }]
     },
     {
       "id": 10,
       "title": "Backend Errors (if instrumented)",
       "type": "stat",
       "datasource": { "type": "prometheus", "uid": "Prometheus" },
-      "gridPos": { "h": 5, "w": 8, "x": 16, "y": 20 },
+      "gridPos": { "h": 5, "w": 8, "x": 8, "y": 19 },
       "targets": [{ "expr": "backend_errors_total", "legendFormat": "errors", "refId": "A" }]
+    },
+    {
+      "id": 11,
+      "title": "Checkout Failures (if instrumented)",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "gridPos": { "h": 5, "w": 8, "x": 16, "y": 19 },
+      "targets": [{ "expr": "checkout_failures_total", "legendFormat": "failures", "refId": "A" }]
     }
   ]
 }

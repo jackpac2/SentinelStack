@@ -1,0 +1,53 @@
+{
+  "uid": "sentinelstack-metrics-debug",
+  "title": "SentinelStack - Metrics Debug",
+  "tags": ["sentinelstack", "devops", "observability"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "editable": true,
+  "panels": [
+    {
+      "id": 1,
+      "title": "Up Targets",
+      "type": "table",
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 0 },
+      "targets": [{ "expr": "up", "format": "table", "instant": true, "refId": "A" }]
+    },
+    {
+      "id": 2,
+      "title": "Available HTTP Metrics",
+      "type": "table",
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 7 },
+      "targets": [{ "expr": "{__name__=~\"http_.*\"}", "format": "table", "instant": true, "refId": "A" }]
+    },
+    {
+      "id": 3,
+      "title": "Available Backend Custom Metrics",
+      "type": "table",
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 7 },
+      "targets": [{ "expr": "{__name__=~\".*orders.*|.*checkout.*|.*backend.*\"}", "format": "table", "instant": true, "refId": "A" }]
+    },
+    {
+      "id": 4,
+      "title": "cAdvisor Metrics Check",
+      "type": "table",
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 14 },
+      "targets": [{ "expr": "{__name__=~\"container_.*\"}", "format": "table", "instant": true, "refId": "A" }]
+    },
+    {
+      "id": 5,
+      "title": "Node Exporter Metrics Check",
+      "type": "table",
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 14 },
+      "targets": [{ "expr": "{__name__=~\"node_.*\"}", "format": "table", "instant": true, "refId": "A" }]
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: ${ALERTMANAGER_RECEIVER_NAME}
+  group_by:
+    - alertname
+  group_wait: 10s
+  group_interval: 30s
+  repeat_interval: 1h
+
+receivers:
+  - name: ${ALERTMANAGER_RECEIVER_NAME}
+${ALERTMANAGER_RECEIVER_CONFIG}
+
+# Discord support:
+# Alertmanager latest supports discord_configs.
+# Set DISCORD_WEBHOOK_URL in infrastructure/monitoring-node/.env to enable it.
+# Leave DISCORD_WEBHOOK_URL empty to generate the default no-op receiver.

@@ -24,33 +24,61 @@ jobs:
           key: ${{ secrets.MONITORING_EC2_SSH_KEY }}
           script: |
             set -euo pipefail
-            log() { echo "[INFO] $*"; }
+            info() { echo "[INFO] $*"; }
             warn() { echo "[WARN] $*"; }
+            fatal() { echo "[FATAL] $*" >&2; exit 1; }
 
             REPO_PATH="${{ secrets.MONITORING_REPO_PATH }}"
             if [ -z "$REPO_PATH" ]; then REPO_PATH="$HOME/sentinelstack"; fi
             export REPO_PATH
             sudo -i env REPO_PATH="$REPO_PATH" bash <<'EOF'
             set -euo pipefail
-            log() { echo "[INFO] $*"; }
+            info() { echo "[INFO] $*"; }
             warn() { echo "[WARN] $*"; }
+            fatal() { echo "[FATAL] $*" >&2; exit 1; }
 
-            if [ ! -d "$REPO_PATH/.git" ]; then
-              log "Cloning SentinelStack into $REPO_PATH"
-              git clone https://github.com/${{ github.repository }}.git "$REPO_PATH"
-            else
-              log "Updating SentinelStack in $REPO_PATH"
-              cd "$REPO_PATH"
-              git pull origin main
-            fi
+            sync_repo() {
+              local repo_path="$1"
+              local repo_url="$2"
+
+              if [ -z "${repo_path}" ] || [ "${repo_path}" = "/" ]; then
+                fatal "Refusing to deploy into unsafe REPO_PATH='${repo_path}'"
+              fi
+
+              if [ ! -d "${repo_path}" ]; then
+                info "Cloning SentinelStack into ${repo_path}"
+                git clone "${repo_url}" "${repo_path}"
+              fi
+
+              if [ ! -d "${repo_path}" ]; then
+                fatal "Repository directory does not exist after clone: ${repo_path}"
+              fi
+
+              if [ ! -d "${repo_path}/.git" ]; then
+                fatal "Directory exists but is not a git repository: ${repo_path}"
+              fi
+
+              cd "${repo_path}"
+
+              # EC2 nodes are deployment targets only. Force-sync to origin/main so
+              # server-side edits, generated files, and stale artifacts never block CI/CD.
+              info "Fetching origin/main"
+              git fetch origin main
+              info "Resetting working tree to origin/main"
+              git reset --hard origin/main
+              info "Removing untracked files created during previous deployments"
+              git clean -fd
+            }
+
+            sync_repo "$REPO_PATH" "https://github.com/${{ github.repository }}.git"
 
             cd "$REPO_PATH"
             chmod +x scripts/*.sh
-            log "Starting monitoring stack"
+            info "Starting monitoring stack"
             ./scripts/start-monitoring-node.sh "${{ secrets.APP_PRIVATE_IP }}"
-            log "Running advisory monitoring health checks"
+            info "Running advisory monitoring health checks"
             if ./scripts/check-monitoring-node.sh; then
-              log "Monitoring checks passed"
+              info "Monitoring checks passed"
             else
               status=$?
               if [ "$status" -eq 2 ]; then
@@ -76,28 +104,58 @@ jobs:
           key: ${{ secrets.APP_EC2_SSH_KEY }}
           script: |
             set -euo pipefail
-            log() { echo "[INFO] $*"; }
+            info() { echo "[INFO] $*"; }
+            warn() { echo "[WARN] $*"; }
+            fatal() { echo "[FATAL] $*" >&2; exit 1; }
 
             REPO_PATH="${{ secrets.APP_REPO_PATH }}"
             if [ -z "$REPO_PATH" ]; then REPO_PATH="$HOME/sentinelstack"; fi
             export REPO_PATH
             sudo -i env REPO_PATH="$REPO_PATH" GHCR_OWNER="${{ github.repository_owner }}" IMAGE_TAG="latest" bash <<'EOF'
             set -euo pipefail
-            log() { echo "[INFO] $*"; }
+            info() { echo "[INFO] $*"; }
+            warn() { echo "[WARN] $*"; }
+            fatal() { echo "[FATAL] $*" >&2; exit 1; }
 
-            if [ ! -d "$REPO_PATH/.git" ]; then
-              log "Cloning SentinelStack into $REPO_PATH"
-              git clone https://github.com/${{ github.repository }}.git "$REPO_PATH"
-            else
-              log "Updating SentinelStack in $REPO_PATH"
-              cd "$REPO_PATH"
-              git pull origin main
-            fi
+            sync_repo() {
+              local repo_path="$1"
+              local repo_url="$2"
+
+              if [ -z "${repo_path}" ] || [ "${repo_path}" = "/" ]; then
+                fatal "Refusing to deploy into unsafe REPO_PATH='${repo_path}'"
+              fi
+
+              if [ ! -d "${repo_path}" ]; then
+                info "Cloning SentinelStack into ${repo_path}"
+                git clone "${repo_url}" "${repo_path}"
+              fi
+
+              if [ ! -d "${repo_path}" ]; then
+                fatal "Repository directory does not exist after clone: ${repo_path}"
+              fi
+
+              if [ ! -d "${repo_path}/.git" ]; then
+                fatal "Directory exists but is not a git repository: ${repo_path}"
+              fi
+
+              cd "${repo_path}"
+
+              # EC2 nodes are deployment targets only. Force-sync to origin/main so
+              # server-side edits, generated files, and stale artifacts never block CI/CD.
+              info "Fetching origin/main"
+              git fetch origin main
+              info "Resetting working tree to origin/main"
+              git reset --hard origin/main
+              info "Removing untracked files created during previous deployments"
+              git clean -fd
+            }
+
+            sync_repo "$REPO_PATH" "https://github.com/${{ github.repository }}.git"
 
             cd "$REPO_PATH"
             chmod +x scripts/*.sh
-            log "Starting app stack"
+            info "Starting app stack"
             ./scripts/start-app-node.sh "${{ secrets.MONITORING_PRIVATE_IP }}"
-            log "Running app health checks"
+            info "Running app health checks"
             ./scripts/check-app-node.sh "${{ secrets.MONITORING_PRIVATE_IP }}"
             EOF

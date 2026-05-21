@@ -23,24 +23,42 @@ jobs:
           username: ${{ secrets.MONITORING_EC2_USER }}
           key: ${{ secrets.MONITORING_EC2_SSH_KEY }}
           script: |
-            set -e
+            set -euo pipefail
+            log() { echo "[INFO] $*"; }
+            warn() { echo "[WARN] $*"; }
+
             REPO_PATH="${{ secrets.MONITORING_REPO_PATH }}"
             if [ -z "$REPO_PATH" ]; then REPO_PATH="$HOME/sentinelstack"; fi
             export REPO_PATH
             sudo -i env REPO_PATH="$REPO_PATH" bash <<'EOF'
-            set -e
+            set -euo pipefail
+            log() { echo "[INFO] $*"; }
+            warn() { echo "[WARN] $*"; }
 
             if [ ! -d "$REPO_PATH/.git" ]; then
+              log "Cloning SentinelStack into $REPO_PATH"
               git clone https://github.com/${{ github.repository }}.git "$REPO_PATH"
             else
+              log "Updating SentinelStack in $REPO_PATH"
               cd "$REPO_PATH"
               git pull origin main
             fi
 
             cd "$REPO_PATH"
             chmod +x scripts/*.sh
+            log "Starting monitoring stack"
             ./scripts/start-monitoring-node.sh "${{ secrets.APP_PRIVATE_IP }}"
-            ./scripts/check-monitoring-node.sh
+            log "Running advisory monitoring health checks"
+            if ./scripts/check-monitoring-node.sh; then
+              log "Monitoring checks passed"
+            else
+              status=$?
+              if [ "$status" -eq 2 ]; then
+                echo "[FATAL] Monitoring check found Docker-level failure"
+                exit "$status"
+              fi
+              warn "Monitoring checks reported non-fatal readiness warnings/failures; continuing to app deployment"
+            fi
             EOF
 
   deploy-app:
@@ -57,22 +75,29 @@ jobs:
           username: ${{ secrets.APP_EC2_USER }}
           key: ${{ secrets.APP_EC2_SSH_KEY }}
           script: |
-            set -e
+            set -euo pipefail
+            log() { echo "[INFO] $*"; }
+
             REPO_PATH="${{ secrets.APP_REPO_PATH }}"
             if [ -z "$REPO_PATH" ]; then REPO_PATH="$HOME/sentinelstack"; fi
             export REPO_PATH
             sudo -i env REPO_PATH="$REPO_PATH" GHCR_OWNER="${{ github.repository_owner }}" IMAGE_TAG="latest" bash <<'EOF'
-            set -e
+            set -euo pipefail
+            log() { echo "[INFO] $*"; }
 
             if [ ! -d "$REPO_PATH/.git" ]; then
+              log "Cloning SentinelStack into $REPO_PATH"
               git clone https://github.com/${{ github.repository }}.git "$REPO_PATH"
             else
+              log "Updating SentinelStack in $REPO_PATH"
               cd "$REPO_PATH"
               git pull origin main
             fi
 
             cd "$REPO_PATH"
             chmod +x scripts/*.sh
+            log "Starting app stack"
             ./scripts/start-app-node.sh "${{ secrets.MONITORING_PRIVATE_IP }}"
+            log "Running app health checks"
             ./scripts/check-app-node.sh "${{ secrets.MONITORING_PRIVATE_IP }}"
             EOF

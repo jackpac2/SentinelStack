@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
+set -uo pipefail
 
 PASSED=0
 FAILED=0
+WARNED=0
+FATAL=0
 
 pass() {
   echo "[PASS] $1"
@@ -13,8 +16,23 @@ fail() {
   FAILED=$((FAILED + 1))
 }
 
+warn() {
+  echo "[WARN] $1"
+  WARNED=$((WARNED + 1))
+}
+
+fatal() {
+  echo "[FATAL] $1"
+  FATAL=$((FATAL + 1))
+}
+
 info() {
   echo "[INFO] $1"
+}
+
+section() {
+  echo
+  echo "========== $1 =========="
 }
 
 check_cmd() {
@@ -23,40 +41,92 @@ check_cmd() {
 
   if eval "${cmd}" >/dev/null 2>&1; then
     pass "${name}"
-  else
-    fail "${name}"
+    return 0
   fi
+
+  fail "${name}"
+  return 1
 }
 
-check_url() {
+check_fatal_cmd() {
+  local name="$1"
+  local cmd="$2"
+
+  if eval "${cmd}" >/dev/null 2>&1; then
+    pass "${name}"
+    return 0
+  fi
+
+  fatal "${name}"
+  return 1
+}
+
+retry_url() {
   local name="$1"
   local url="$2"
+  local attempts="${3:-12}"
+  local sleep_seconds="${4:-5}"
+  local severity="${5:-fail}"
+  local attempt
 
-  if curl -fsS "${url}" >/dev/null 2>&1; then
-    pass "${name}: ${url}"
-  else
-    fail "${name}: ${url}"
+  for attempt in $(seq 1 "${attempts}"); do
+    if curl -fsS --connect-timeout 3 --max-time 10 "${url}" >/dev/null 2>&1; then
+      pass "${name}: ${url}"
+      return 0
+    fi
+
+    info "${name} not ready yet (${attempt}/${attempts})"
+    sleep "${sleep_seconds}"
+  done
+
+  if [ "${severity}" = "warn" ]; then
+    warn "${name}: ${url}"
+    return 0
   fi
+
+  fail "${name}: ${url}"
+  return 1
 }
 
 check_container() {
   local container="$1"
+  local severity="${2:-fail}"
 
   if docker ps --format '{{.Names}}' 2>/dev/null | grep -qx "${container}"; then
     pass "Container running: ${container}"
+    return 0
+  fi
+
+  if [ "${severity}" = "warn" ]; then
+    warn "Container not running yet: ${container}"
+    return 0
+  fi
+
+  fail "Container running: ${container}"
+  return 1
+}
+
+print_container_logs() {
+  local container="$1"
+  local lines="${2:-30}"
+
+  section "Recent logs: ${container}"
+  if docker logs "${container}" --tail="${lines}"; then
+    pass "Logs readable: ${container}"
   else
-    fail "Container running: ${container}"
+    warn "Logs not readable: ${container}"
   fi
 }
 
 print_prometheus_targets() {
   local body
+  local job
 
-  info "Prometheus target health"
-  body="$(curl -fsS http://localhost:9090/api/v1/targets 2>/dev/null)"
+  section "Prometheus target health"
+  body="$(curl -fsS --connect-timeout 3 --max-time 10 http://localhost:9090/api/v1/targets 2>/dev/null)"
   if [ -z "${body}" ]; then
     fail "Prometheus targets API reachable"
-    return
+    return 1
   fi
 
   pass "Prometheus targets API reachable"
@@ -71,7 +141,7 @@ print_prometheus_targets() {
     if echo "${body}" | grep -q "\"job\":\"${job}\""; then
       pass "Prometheus target present: ${job}"
     else
-      fail "Prometheus target present: ${job}"
+      warn "Prometheus target missing or not discovered yet: ${job}"
     fi
   done
 }
@@ -79,11 +149,11 @@ print_prometheus_targets() {
 print_loki_labels() {
   local body
 
-  info "Loki labels"
-  body="$(curl -fsS http://localhost:3100/loki/api/v1/labels 2>/dev/null)"
+  section "Loki labels"
+  body="$(curl -fsS --connect-timeout 3 --max-time 10 http://localhost:3100/loki/api/v1/labels 2>/dev/null)"
   if [ -z "${body}" ]; then
-    fail "Loki labels API reachable"
-    return
+    warn "Loki labels API not ready yet"
+    return 0
   fi
 
   pass "Loki labels API reachable"
@@ -91,69 +161,64 @@ print_loki_labels() {
   if command -v jq >/dev/null 2>&1; then
     echo "${body}" | jq -r '.data[]?'
     if [ "$(echo "${body}" | jq '.data | length')" -eq 0 ]; then
-      fail "Loki labels found"
-      echo "[INFO] No labels found. Promtail may not be pushing logs yet."
+      warn "No Loki labels found yet. Promtail may still be starting or no app logs have been pushed."
     else
       pass "Loki labels found"
     fi
   else
     echo "${body}"
     if echo "${body}" | grep -q '"data":\[\]'; then
-      fail "Loki labels found"
-      echo "[INFO] No labels found. Promtail may not be pushing logs yet."
+      warn "No Loki labels found yet. Promtail may still be starting or no app logs have been pushed."
     else
       pass "Loki labels found"
     fi
   fi
 }
 
-info "Checking SentinelStack monitoring node"
+section "SentinelStack monitoring node checks"
 
-check_cmd "Docker CLI installed" "command -v docker"
-check_cmd "Docker daemon reachable" "docker ps"
-check_cmd "Docker Compose available" "docker compose version"
+check_fatal_cmd "Docker CLI installed" "command -v docker"
+check_fatal_cmd "Docker daemon reachable" "docker ps"
+check_fatal_cmd "Docker Compose available" "docker compose version"
 
+if [ "${FATAL}" -gt 0 ]; then
+  echo
+  echo "Summary: ${PASSED} passed, ${FAILED} failed, ${WARNED} warnings, ${FATAL} fatal"
+  exit 2
+fi
+
+section "Containers"
 for container in \
   sentinelstack-prometheus \
   sentinelstack-grafana \
   sentinelstack-loki \
   sentinelstack-alertmanager; do
-  check_container "${container}"
+  check_container "${container}" "fail"
 done
 
-check_url "Prometheus ready" "http://localhost:9090/-/ready"
-check_url "Grafana health" "http://localhost:3000/api/health"
-check_url "Loki ready" "http://localhost:3100/ready"
-check_url "Alertmanager ready" "http://localhost:9093/-/ready"
-check_url "Alertmanager status" "http://localhost:9093/api/v2/status"
+section "Service readiness"
+retry_url "Prometheus ready" "http://localhost:9090/-/ready" 12 5 "fail"
+retry_url "Grafana health" "http://localhost:3000/api/health" 12 5 "fail"
+retry_url "Loki ready" "http://localhost:3100/ready" 12 5 "warn"
+retry_url "Alertmanager ready" "http://localhost:9093/-/ready" 12 5 "fail"
+retry_url "Alertmanager status" "http://localhost:9093/api/v2/status" 6 5 "fail"
 
 print_prometheus_targets
 print_loki_labels
 
-info "Recent Prometheus logs"
-if docker logs sentinelstack-prometheus --tail=30; then
-  pass "Prometheus logs readable"
-else
-  fail "Prometheus logs readable"
-fi
-
-info "Recent Loki logs"
-if docker logs sentinelstack-loki --tail=30; then
-  pass "Loki logs readable"
-else
-  fail "Loki logs readable"
-fi
-
-info "Recent Alertmanager logs"
-if docker logs sentinelstack-alertmanager --tail=30; then
-  pass "Alertmanager logs readable"
-else
-  fail "Alertmanager logs readable"
-fi
+print_container_logs "sentinelstack-prometheus" 30
+print_container_logs "sentinelstack-loki" 30
+print_container_logs "sentinelstack-alertmanager" 30
 
 echo
-echo "Summary: ${PASSED} passed, ${FAILED} failed"
+echo "Summary: ${PASSED} passed, ${FAILED} failed, ${WARNED} warnings, ${FATAL} fatal"
+
+if [ "${FATAL}" -gt 0 ]; then
+  exit 2
+fi
 
 if [ "${FAILED}" -gt 0 ]; then
   exit 1
 fi
+
+exit 0

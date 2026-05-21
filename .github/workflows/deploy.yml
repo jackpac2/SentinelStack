@@ -28,11 +28,7 @@ jobs:
             if [ -z "$REPO_PATH" ]; then REPO_PATH="$HOME/sentinelstack"; fi
 
             if [ ! -d "$REPO_PATH/.git" ]; then
-              mkdir -p ~/.ssh
-              chmod 700 ~/.ssh
-              ssh-keyscan github.com >> ~/.ssh/known_hosts
-              chmod 644 ~/.ssh/known_hosts
-              git clone git@github.com:jackpac2/SentinelStack.git "$REPO_PATH"
+              git clone https://github.com/${{ github.repository }}.git "$REPO_PATH"
             else
               cd "$REPO_PATH"
               git pull origin main
@@ -62,11 +58,7 @@ jobs:
             if [ -z "$REPO_PATH" ]; then REPO_PATH="$HOME/sentinelstack"; fi
 
             if [ ! -d "$REPO_PATH/.git" ]; then
-              mkdir -p ~/.ssh
-              chmod 700 ~/.ssh
-              ssh-keyscan github.com >> ~/.ssh/known_hosts
-              chmod 644 ~/.ssh/known_hosts
-              git clone git@github.com:jackpac2/SentinelStack.git "$REPO_PATH"
+              git clone https://github.com/${{ github.repository }}.git "$REPO_PATH"
             else
               cd "$REPO_PATH"
               git pull origin main

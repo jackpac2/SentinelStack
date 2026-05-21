@@ -1,0 +1,58 @@
+{
+  "uid": "sentinelstack-logs-overview",
+  "title": "SentinelStack - Logs Overview",
+  "tags": ["sentinelstack", "devops", "observability"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "editable": true,
+  "panels": [
+    {
+      "id": 1,
+      "title": "Recent App Node Logs",
+      "type": "logs",
+      "datasource": { "type": "loki", "uid": "Loki" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
+      "options": { "dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": false, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true },
+      "targets": [{ "expr": "{job=~\".+\"}", "refId": "A" }]
+    },
+    {
+      "id": 2,
+      "title": "Backend Logs",
+      "type": "logs",
+      "datasource": { "type": "loki", "uid": "Loki" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "options": { "dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": false, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true },
+      "targets": [{ "expr": "{container_name=~\".*backend.*\"}", "refId": "A" }]
+    },
+    {
+      "id": 3,
+      "title": "NGINX Logs",
+      "type": "logs",
+      "datasource": { "type": "loki", "uid": "Loki" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "options": { "dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": false, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true },
+      "targets": [{ "expr": "{container_name=~\".*nginx.*\"}", "refId": "A" }]
+    },
+    {
+      "id": 4,
+      "title": "Error Logs",
+      "type": "logs",
+      "datasource": { "type": "loki", "uid": "Loki" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "options": { "dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": false, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true },
+      "targets": [{ "expr": "{job=~\".+\"} |= \"ERROR\"", "refId": "A" }]
+    },
+    {
+      "id": 5,
+      "title": "Log Rate",
+      "type": "timeseries",
+      "datasource": { "type": "loki", "uid": "Loki" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "fieldConfig": { "defaults": { "unit": "logs/sec" }, "overrides": [] },
+      "targets": [{ "expr": "sum(rate({job=~\".+\"}[5m]))", "refId": "A" }]
+    }
+  ]
+}

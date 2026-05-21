@@ -24,15 +24,12 @@ services:
       - monitoring_network
 
   alertmanager:
-    image: prom/alertmanager:v0.27.0
+    image: prom/alertmanager:latest
     container_name: sentinelstack-alertmanager
     restart: unless-stopped
     command:
       - --config.file=/etc/alertmanager/alertmanager.yml
       - --storage.path=/alertmanager
-      - --config.expand-env=true
-    environment:
-      DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL}
     ports:
       - "${ALERTMANAGER_PORT:-9093}:9093"
     volumes:

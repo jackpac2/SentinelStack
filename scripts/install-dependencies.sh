@@ -97,11 +97,11 @@ install_docker_engine() {
 }
 
 configure_docker_group() {
-  local current_user
-  current_user="${USER:-$(id -un)}"
+  local target_user
+  target_user="${SUDO_USER:-${USER:-$(id -un)}}"
 
-  if [ "$(id -u)" -eq 0 ]; then
-    echo "Running as root; docker group membership change is not needed."
+  if [ -z "${target_user}" ] || [ "${target_user}" = "root" ]; then
+    echo "No non-root deployment user detected for docker group setup."
     return
   fi
 
@@ -110,13 +110,13 @@ configure_docker_group() {
     return
   fi
 
-  if id -nG "${current_user}" | tr ' ' '\n' | grep -qx docker; then
-    echo "User ${current_user} already belongs to the docker group."
+  if id -nG "${target_user}" | tr ' ' '\n' | grep -qx docker; then
+    echo "User ${target_user} already belongs to the docker group."
     return
   fi
 
-  echo "Adding ${current_user} to docker group for future non-sudo Docker access..."
-  sudo usermod -aG docker "${current_user}"
+  echo "Adding ${target_user} to docker group for future non-sudo Docker access..."
+  sudo usermod -aG docker "${target_user}"
   echo "Log out and back in (or reconnect SSH) for non-sudo Docker access."
 }
 

@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ "$(id -u)" -ne 0 ]; then
-  echo "[INFO] Re-running as root with sudo."
-  exec sudo -E bash "$0" "$@"
-fi
-
 if [ "$#" -ne 1 ]; then
   echo "Usage: ./scripts/start-app-node.sh <MONITORING_HOST>"
   echo "Example: ./scripts/start-app-node.sh 10.0.3.22"
@@ -132,8 +127,11 @@ info "Starting app node stack"
 if docker ps >/dev/null 2>&1; then
   DOCKER_COMPOSE=(docker compose)
 else
-  info "Current session cannot access the Docker socket without sudo; using sudo for this run."
-  DOCKER_COMPOSE=(sudo docker compose)
+  if getent group docker | awk -F: '{print $4}' | tr ',' '\n' | grep -qx "$(id -un)"; then
+    fatal "User $(id -un) is in the docker group, but this SSH session has not picked it up yet. Reconnect SSH and run again."
+  fi
+
+  fatal "Docker is not reachable for user $(id -un). Add the user to the docker group, reconnect SSH, and run again."
 fi
 
 "${DOCKER_COMPOSE[@]}" \

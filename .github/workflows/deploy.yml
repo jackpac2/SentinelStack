@@ -28,14 +28,13 @@ jobs:
             warn() { echo "[WARN] $*"; }
             fatal() { echo "[FATAL] $*" >&2; exit 1; }
 
+            if [ "$(id -un)" = "root" ]; then
+              fatal "Deployment must run as the SSH user, not root."
+            fi
+
             REPO_PATH="${{ secrets.MONITORING_REPO_PATH }}"
             if [ -z "$REPO_PATH" ]; then REPO_PATH="$HOME/sentinelstack"; fi
             export REPO_PATH
-            sudo -i env REPO_PATH="$REPO_PATH" bash <<'EOF'
-            set -euo pipefail
-            info() { echo "[INFO] $*"; }
-            warn() { echo "[WARN] $*"; }
-            fatal() { echo "[FATAL] $*" >&2; exit 1; }
 
             sync_repo() {
               local repo_path="$1"
@@ -45,8 +44,13 @@ jobs:
                 fatal "Refusing to deploy into unsafe REPO_PATH='${repo_path}'"
               fi
 
+              if [ -d "${repo_path}" ] && [ ! -w "${repo_path}" ]; then
+                warn "Repository path is not writable by $(id -un); fixing ownership once."
+                sudo chown -R "$(id -u):$(id -g)" "${repo_path}"
+              fi
+
               if [ ! -d "${repo_path}" ]; then
-                info "Cloning SentinelStack into ${repo_path}"
+                info "Cloning SentinelStack into ${repo_path} as $(id -un)"
                 git clone "${repo_url}" "${repo_path}"
               fi
 
@@ -87,7 +91,6 @@ jobs:
               fi
               warn "Monitoring checks reported non-fatal readiness warnings/failures; continuing to app deployment"
             fi
-            EOF
 
   deploy-app:
     name: Deploy app node
@@ -108,14 +111,15 @@ jobs:
             warn() { echo "[WARN] $*"; }
             fatal() { echo "[FATAL] $*" >&2; exit 1; }
 
+            if [ "$(id -un)" = "root" ]; then
+              fatal "Deployment must run as the SSH user, not root."
+            fi
+
             REPO_PATH="${{ secrets.APP_REPO_PATH }}"
             if [ -z "$REPO_PATH" ]; then REPO_PATH="$HOME/sentinelstack"; fi
             export REPO_PATH
-            sudo -i env REPO_PATH="$REPO_PATH" GHCR_OWNER="${{ github.repository_owner }}" IMAGE_TAG="latest" bash <<'EOF'
-            set -euo pipefail
-            info() { echo "[INFO] $*"; }
-            warn() { echo "[WARN] $*"; }
-            fatal() { echo "[FATAL] $*" >&2; exit 1; }
+            export GHCR_OWNER="${{ github.repository_owner }}"
+            export IMAGE_TAG="latest"
 
             sync_repo() {
               local repo_path="$1"
@@ -125,8 +129,13 @@ jobs:
                 fatal "Refusing to deploy into unsafe REPO_PATH='${repo_path}'"
               fi
 
+              if [ -d "${repo_path}" ] && [ ! -w "${repo_path}" ]; then
+                warn "Repository path is not writable by $(id -un); fixing ownership once."
+                sudo chown -R "$(id -u):$(id -g)" "${repo_path}"
+              fi
+
               if [ ! -d "${repo_path}" ]; then
-                info "Cloning SentinelStack into ${repo_path}"
+                info "Cloning SentinelStack into ${repo_path} as $(id -un)"
                 git clone "${repo_url}" "${repo_path}"
               fi
 
@@ -158,4 +167,3 @@ jobs:
             ./scripts/start-app-node.sh "${{ secrets.MONITORING_PRIVATE_IP }}"
             info "Running app health checks"
             ./scripts/check-app-node.sh "${{ secrets.MONITORING_PRIVATE_IP }}"
-            EOF

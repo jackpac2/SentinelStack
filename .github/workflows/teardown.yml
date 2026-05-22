@@ -25,18 +25,20 @@ jobs:
           username: ${{ secrets.APP_EC2_USER }}
           key: ${{ secrets.APP_EC2_SSH_KEY }}
           script: |
-            set -e
-            echo "WARNING: This will stop the app stack and delete Docker volumes. It will not delete repo files or images."
+            set -euo pipefail
+            echo "[WARN] This will stop the app stack and delete Docker volumes. It will not delete repo files or images."
+            if [ "$(id -un)" = "root" ]; then
+              echo "[FATAL] Teardown must run as the SSH user, not root." >&2
+              exit 1
+            fi
             REPO_PATH="${{ secrets.APP_REPO_PATH }}"
             if [ -z "$REPO_PATH" ]; then REPO_PATH="$HOME/sentinelstack"; fi
-            sudo -i env REPO_PATH="$REPO_PATH" bash <<'EOF'
-            set -e
+
             cd "$REPO_PATH"
             docker compose \
               --env-file infrastructure/app-node/.env \
               -f infrastructure/app-node/docker-compose.yml \
               down -v
-            EOF
 
   teardown-monitoring:
     name: Tear down monitoring node
@@ -50,15 +52,17 @@ jobs:
           username: ${{ secrets.MONITORING_EC2_USER }}
           key: ${{ secrets.MONITORING_EC2_SSH_KEY }}
           script: |
-            set -e
-            echo "WARNING: This will stop the monitoring stack and delete Docker volumes. It will not delete repo files or images."
+            set -euo pipefail
+            echo "[WARN] This will stop the monitoring stack and delete Docker volumes. It will not delete repo files or images."
+            if [ "$(id -un)" = "root" ]; then
+              echo "[FATAL] Teardown must run as the SSH user, not root." >&2
+              exit 1
+            fi
             REPO_PATH="${{ secrets.MONITORING_REPO_PATH }}"
             if [ -z "$REPO_PATH" ]; then REPO_PATH="$HOME/sentinelstack"; fi
-            sudo -i env REPO_PATH="$REPO_PATH" bash <<'EOF'
-            set -e
+
             cd "$REPO_PATH"
             docker compose \
               --env-file infrastructure/monitoring-node/.env \
               -f infrastructure/monitoring-node/docker-compose.yml \
               down -v
-            EOF

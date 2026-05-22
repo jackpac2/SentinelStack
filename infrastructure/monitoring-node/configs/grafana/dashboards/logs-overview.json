@@ -4,19 +4,19 @@
   "tags": ["sentinelstack", "devops", "observability"],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 2,
+  "version": 3,
   "refresh": "10s",
   "time": { "from": "now-1h", "to": "now" },
   "editable": true,
   "panels": [
     {
       "id": 1,
-      "title": "All App Logs",
+      "title": "All SentinelStack Logs",
       "type": "logs",
       "datasource": { "type": "loki", "uid": "Loki" },
       "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
-      "options": { "dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": false, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true },
-      "targets": [{ "expr": "{job=~\".+\"}", "refId": "A" }]
+      "options": { "dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true },
+      "targets": [{ "expr": "{job=\"sentinelstack\"}", "refId": "A" }]
     },
     {
       "id": 2,
@@ -24,8 +24,8 @@
       "type": "logs",
       "datasource": { "type": "loki", "uid": "Loki" },
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
-      "options": { "dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": false, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true },
-      "targets": [{ "expr": "{job=~\".+\"} |= \"backend\"", "refId": "A" }]
+      "options": { "dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true },
+      "targets": [{ "expr": "{job=\"sentinelstack\", service=\"backend\"}", "refId": "A" }]
     },
     {
       "id": 3,
@@ -33,8 +33,8 @@
       "type": "logs",
       "datasource": { "type": "loki", "uid": "Loki" },
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
-      "options": { "dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": false, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true },
-      "targets": [{ "expr": "{job=~\".+\"} |= \"nginx\"", "refId": "A" }]
+      "options": { "dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true },
+      "targets": [{ "expr": "{job=\"sentinelstack\", service=\"nginx\"}", "refId": "A" }]
     },
     {
       "id": 4,
@@ -42,8 +42,8 @@
       "type": "logs",
       "datasource": { "type": "loki", "uid": "Loki" },
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
-      "options": { "dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": false, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true },
-      "targets": [{ "expr": "{job=~\".+\"} |~ \"(?i)error|exception|failed\"", "refId": "A" }]
+      "options": { "dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true },
+      "targets": [{ "expr": "{job=\"sentinelstack\"} |~ \"(?i)error|exception|failed|fatal\"", "refId": "A" }]
     },
     {
       "id": 5,
@@ -52,16 +52,16 @@
       "datasource": { "type": "loki", "uid": "Loki" },
       "gridPos": { "h": 8, "w": 6, "x": 12, "y": 16 },
       "fieldConfig": { "defaults": { "unit": "logs/sec" }, "overrides": [] },
-      "targets": [{ "expr": "sum(rate({job=~\".+\"}[5m]))", "refId": "A" }]
+      "targets": [{ "expr": "sum(rate({job=\"sentinelstack\"}[5m]))", "refId": "A" }]
     },
     {
       "id": 6,
-      "title": "Logs by Job",
+      "title": "Logs by Service",
       "type": "timeseries",
       "datasource": { "type": "loki", "uid": "Loki" },
       "gridPos": { "h": 8, "w": 6, "x": 18, "y": 16 },
       "fieldConfig": { "defaults": { "unit": "logs/sec" }, "overrides": [] },
-      "targets": [{ "expr": "sum by (job) (rate({job=~\".+\"}[5m]))", "legendFormat": "{{ job }}", "refId": "A" }]
+      "targets": [{ "expr": "sum by (service) (rate({job=\"sentinelstack\"}[5m]))", "legendFormat": "{{ service }}", "refId": "A" }]
     }
   ]
 }

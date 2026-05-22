@@ -1,0 +1,59 @@
+{
+  "uid": "sentinelstack-overview",
+  "title": "SentinelStack Overview",
+  "tags": ["sentinelstack", "devops", "observability"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 2,
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "editable": true,
+  "panels": [
+    {
+      "id": 1,
+      "title": "Backend Up",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
+      "fieldConfig": { "defaults": { "decimals": 0, "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "textMode": "auto" },
+      "targets": [{ "expr": "up{job=~\".*backend.*\"}", "legendFormat": "{{ instance }}", "refId": "A" }]
+    },
+    {
+      "id": 2,
+      "title": "Request Rate",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "gridPos": { "h": 5, "w": 9, "x": 6, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "targets": [{ "expr": "sum(rate(http_requests_total[5m]))", "legendFormat": "requests/sec", "refId": "A" }]
+    },
+    {
+      "id": 3,
+      "title": "Log Rate",
+      "type": "timeseries",
+      "datasource": { "type": "loki", "uid": "Loki" },
+      "gridPos": { "h": 5, "w": 9, "x": 15, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "logs/sec" }, "overrides": [] },
+      "targets": [{ "expr": "sum(rate({job=\"sentinelstack\"}[5m]))", "legendFormat": "logs/sec", "refId": "A" }]
+    },
+    {
+      "id": 4,
+      "title": "Recent Backend Logs",
+      "type": "logs",
+      "datasource": { "type": "loki", "uid": "Loki" },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 5 },
+      "options": { "dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true },
+      "targets": [{ "expr": "{job=\"sentinelstack\", service=\"backend\"}", "refId": "A" }]
+    },
+    {
+      "id": 5,
+      "title": "Recent Error Logs",
+      "type": "logs",
+      "datasource": { "type": "loki", "uid": "Loki" },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 5 },
+      "options": { "dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true },
+      "targets": [{ "expr": "{job=\"sentinelstack\"} |~ \"(?i)error|exception|failed|fatal\"", "refId": "A" }]
+    }
+  ]
+}

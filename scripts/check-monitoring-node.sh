@@ -148,6 +148,7 @@ print_prometheus_targets() {
 
 print_loki_labels() {
   local body
+  local label
 
   section "Loki labels"
   body="$(curl -fsS --connect-timeout 3 --max-time 10 http://localhost:3100/loki/api/v1/labels 2>/dev/null)"
@@ -171,6 +172,46 @@ print_loki_labels() {
       warn "No Loki labels found yet. Promtail may still be starting or no app logs have been pushed."
     else
       pass "Loki labels found"
+    fi
+  fi
+
+  for label in job service container host environment; do
+    if echo "${body}" | grep -q "\"${label}\""; then
+      pass "Loki label present: ${label}"
+    else
+      warn "Loki label not found yet: ${label}"
+    fi
+  done
+}
+
+check_loki_query() {
+  local query="$1"
+  local body
+
+  section "Loki query: ${query}"
+  body="$(curl -fsS --connect-timeout 3 --max-time 10 \
+    -G "http://localhost:3100/loki/api/v1/query" \
+    --data-urlencode "query=${query}" 2>/dev/null)"
+
+  if [ -z "${body}" ]; then
+    warn "Loki query failed or returned no response: ${query}"
+    return 0
+  fi
+
+  pass "Loki query accepted: ${query}"
+  if command -v jq >/dev/null 2>&1; then
+    echo "${body}" | jq -r '.data.result[]?.stream // empty' | head -20
+    if [ "$(echo "${body}" | jq '.data.result | length')" -eq 0 ]; then
+      warn "No log streams returned yet for query: ${query}"
+    else
+      pass "Loki query returned log streams"
+    fi
+  else
+    echo "${body}" | head -20
+    if echo "${body}" | grep -q '"result":\[\]'; then
+      warn "No log streams returned yet for query: ${query}"
+    else
+      pass "Loki query returned log streams"
     fi
   fi
 }
@@ -205,6 +246,9 @@ retry_url "Alertmanager status" "http://localhost:9093/api/v2/status" 6 5 "fail"
 
 print_prometheus_targets
 print_loki_labels
+check_loki_query '{job="sentinelstack"}'
+check_loki_query '{service="backend"}'
+check_loki_query '{job="sentinelstack"} |~ "(?i)error|exception|failed|fatal"'
 
 print_container_logs "sentinelstack-prometheus" 30
 print_container_logs "sentinelstack-loki" 30

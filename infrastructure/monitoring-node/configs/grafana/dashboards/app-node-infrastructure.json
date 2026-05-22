@@ -1,6 +1,6 @@
 {
   "uid": "sentinelstack-app-node-infrastructure",
-  "title": "SentinelStack - App Node Infrastructure",
+  "title": "SentinelStack - App Node Metrics",
   "tags": ["sentinelstack", "devops", "observability"],
   "timezone": "browser",
   "schemaVersion": 39,

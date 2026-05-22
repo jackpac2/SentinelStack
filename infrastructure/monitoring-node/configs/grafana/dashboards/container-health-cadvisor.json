@@ -1,6 +1,6 @@
 {
   "uid": "sentinelstack-container-health",
-  "title": "SentinelStack - Container Health",
+  "title": "SentinelStack - Docker Container Metrics",
   "tags": ["sentinelstack", "devops", "observability"],
   "timezone": "browser",
   "schemaVersion": 39,

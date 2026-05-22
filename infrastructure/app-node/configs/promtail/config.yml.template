@@ -18,13 +18,20 @@ scrape_configs:
       - source_labels: [__meta_docker_container_label_com_docker_compose_project]
         regex: sentinelstack_app_node
         action: keep
+      - replacement: sentinelstack
+        target_label: job
       - source_labels: [__meta_docker_container_name]
         regex: /(.+)
         target_label: container
       - source_labels: [__meta_docker_container_label_com_docker_compose_service]
         target_label: service
+      - source_labels: [__meta_docker_container_label_com_sentinelstack_environment]
+        target_label: environment
       - replacement: ${NODE_NAME}
-        target_label: node
+        target_label: host
+      - source_labels: [__meta_docker_container_id]
+        target_label: __path__
+        replacement: /var/lib/docker/containers/$1/$1-json.log
 
     pipeline_stages:
       - docker: {}

@@ -2,6 +2,10 @@ name: sentinelstack_app_node
 
 # Generated configs must exist before this stack starts.
 # Run scripts/generate-app-configs.sh and edit config.yml.template, not config.yml.
+x-sentinelstack-labels: &sentinelstack-labels
+  com.sentinelstack.stack: sentinelstack
+  com.sentinelstack.environment: ${ENVIRONMENT:-production}
+
 services:
   nginx:
     image: nginx:1.27-alpine
@@ -14,6 +18,9 @@ services:
     depends_on:
       - frontend
       - backend
+    labels:
+      <<: *sentinelstack-labels
+      com.sentinelstack.service: nginx
     networks:
       - app_network
 
@@ -36,6 +43,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    labels:
+      <<: *sentinelstack-labels
+      com.sentinelstack.service: postgres
     networks:
       - app_network
 
@@ -55,6 +65,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    labels:
+      <<: *sentinelstack-labels
+      com.sentinelstack.service: backend
     networks:
       - app_network
 
@@ -66,6 +79,9 @@ services:
       - "80"
     depends_on:
       - backend
+    labels:
+      <<: *sentinelstack-labels
+      com.sentinelstack.service: frontend
     networks:
       - app_network
 
@@ -75,6 +91,9 @@ services:
     restart: unless-stopped
     ports:
       - "${NODE_EXPORTER_PORT:-9100}:9100"
+    labels:
+      <<: *sentinelstack-labels
+      com.sentinelstack.service: node-exporter
     networks:
       - app_network
 
@@ -93,6 +112,9 @@ services:
       - /sys:/sys:ro
       - /var/lib/docker:/var/lib/docker:ro
       - /dev/disk:/dev/disk:ro
+    labels:
+      <<: *sentinelstack-labels
+      com.sentinelstack.service: cadvisor
     networks:
       - app_network
 
@@ -105,11 +127,15 @@ services:
       - -config.expand-env=true
     environment:
       NODE_NAME: ${NODE_NAME:-app-node}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
     volumes:
       - ./configs/promtail/config.yml:/etc/promtail/config.yml:ro
       - promtail_positions:/tmp
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
+    labels:
+      <<: *sentinelstack-labels
+      com.sentinelstack.service: promtail
     networks:
       - app_network
 

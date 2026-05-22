@@ -56,6 +56,36 @@ check_url() {
   fi
 }
 
+retry_http_check() {
+  local name="$1"
+  local url="$2"
+  local timeout_seconds="${3:-60}"
+  local sleep_seconds="${4:-3}"
+  local attempts=$((timeout_seconds / sleep_seconds))
+  local attempt
+
+  if [ "${attempts}" -lt 1 ]; then
+    attempts=1
+  fi
+
+  info "Waiting for ${name}: ${url}"
+
+  for attempt in $(seq 1 "${attempts}"); do
+    if curl -fsS --connect-timeout 3 --max-time 10 "${url}" >/dev/null 2>&1; then
+      pass "${name}: ${url}"
+      return 0
+    fi
+
+    if [ "${attempt}" -lt "${attempts}" ]; then
+      info "${name} not ready yet; retry ${attempt}/${attempts}, sleeping ${sleep_seconds}s"
+      sleep "${sleep_seconds}"
+    fi
+  done
+
+  fail "${name}: ${url} failed after ${timeout_seconds}s"
+  return 1
+}
+
 check_container() {
   local container="$1"
 
@@ -147,9 +177,10 @@ for container in \
   check_container "${container}"
 done
 
-check_url "App health endpoint" "http://localhost/api/health"
-check_url "Products endpoint" "http://localhost/api/products"
-check_url "Backend metrics through nginx" "http://localhost/api/metrics"
+section "App endpoint readiness"
+retry_http_check "App health endpoint" "http://localhost/api/health" 60 3
+retry_http_check "Products endpoint" "http://localhost/api/products" 60 3
+retry_http_check "Backend metrics through nginx" "http://localhost/api/metrics" 60 3
 
 check_url "node-exporter metrics" "http://localhost:9100/metrics"
 check_url "cAdvisor metrics" "http://localhost:8080/metrics"

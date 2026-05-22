@@ -47,6 +47,11 @@ sync_repo_if_available() {
     fatal "Refusing to sync because .git was not found at ${repo_root}/.git"
   fi
 
+  if { [ ! -w "${repo_root}/.git" ]; } || { [ -e "${repo_root}/.git/FETCH_HEAD" ] && [ ! -w "${repo_root}/.git/FETCH_HEAD" ]; }; then
+    warn "Git metadata is not writable by $(id -un); fixing repo ownership once."
+    sudo chown -R "$(id -u):$(id -g)" "${repo_root}"
+  fi
+
   before_sha="$(git -C "${repo_root}" rev-parse HEAD)"
   info "Syncing repo with origin/main from ${repo_root}"
 

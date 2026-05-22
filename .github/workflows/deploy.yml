@@ -49,6 +49,11 @@ jobs:
                 sudo chown -R "$(id -u):$(id -g)" "${repo_path}"
               fi
 
+              if [ -d "${repo_path}/.git" ] && { [ ! -w "${repo_path}/.git" ] || { [ -e "${repo_path}/.git/FETCH_HEAD" ] && [ ! -w "${repo_path}/.git/FETCH_HEAD" ]; }; }; then
+                warn "Git metadata is not writable by $(id -un); fixing ownership once."
+                sudo chown -R "$(id -u):$(id -g)" "${repo_path}"
+              fi
+
               if [ ! -d "${repo_path}" ]; then
                 info "Cloning SentinelStack into ${repo_path} as $(id -un)"
                 git clone "${repo_url}" "${repo_path}"
@@ -131,6 +136,11 @@ jobs:
 
               if [ -d "${repo_path}" ] && [ ! -w "${repo_path}" ]; then
                 warn "Repository path is not writable by $(id -un); fixing ownership once."
+                sudo chown -R "$(id -u):$(id -g)" "${repo_path}"
+              fi
+
+              if [ -d "${repo_path}/.git" ] && { [ ! -w "${repo_path}/.git" ] || { [ -e "${repo_path}/.git/FETCH_HEAD" ] && [ ! -w "${repo_path}/.git/FETCH_HEAD" ]; }; }; then
+                warn "Git metadata is not writable by $(id -un); fixing ownership once."
                 sudo chown -R "$(id -u):$(id -g)" "${repo_path}"
               fi
 

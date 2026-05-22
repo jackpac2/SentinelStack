@@ -216,6 +216,61 @@ check_loki_query() {
   fi
 }
 
+check_prometheus_rules() {
+  local body
+  local alert
+
+  section "Prometheus alert rules"
+  body="$(curl -fsS --connect-timeout 3 --max-time 10 http://localhost:9090/api/v1/rules 2>/dev/null)"
+  if [ -z "${body}" ]; then
+    fail "Prometheus rules API reachable"
+    return 1
+  fi
+
+  pass "Prometheus rules API reachable"
+
+  for alert in BackendDown HighCPUUsage HighMemoryUsage HighDiskUsage HighLatency High5xxRate ContainerRestart; do
+    if echo "${body}" | grep -q "\"name\":\"${alert}\""; then
+      pass "Alert rule loaded: ${alert}"
+    else
+      fail "Alert rule loaded: ${alert}"
+    fi
+  done
+}
+
+check_prometheus_alerts_endpoint() {
+  section "Prometheus alerts endpoint"
+  if curl -fsS --connect-timeout 3 --max-time 10 http://localhost:9090/api/v1/alerts >/dev/null 2>&1; then
+    pass "Prometheus alerts API reachable"
+  else
+    fail "Prometheus alerts API reachable"
+  fi
+}
+
+check_discord_config() {
+  local env_file="infrastructure/monitoring-node/.env"
+  local webhook
+
+  section "Alertmanager Discord config"
+  if [ ! -f "${env_file}" ]; then
+    warn "Monitoring env file not found: ${env_file}"
+    return 0
+  fi
+
+  webhook="$(grep -E '^DISCORD_WEBHOOK_URL=' "${env_file}" | tail -n 1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//")"
+  if [ -n "${webhook}" ]; then
+    pass "DISCORD_WEBHOOK_URL is configured in monitoring env"
+  else
+    warn "DISCORD_WEBHOOK_URL is empty. Alertmanager will use the safe no-op receiver."
+  fi
+
+  if grep -q "discord_configs" infrastructure/monitoring-node/configs/alertmanager/alertmanager.yml 2>/dev/null; then
+    pass "Generated Alertmanager config contains discord_configs"
+  else
+    warn "Generated Alertmanager config does not contain discord_configs"
+  fi
+}
+
 section "SentinelStack monitoring node checks"
 
 check_fatal_cmd "Docker CLI installed" "command -v docker"
@@ -245,6 +300,9 @@ retry_url "Alertmanager ready" "http://localhost:9093/-/ready" 12 5 "fail"
 retry_url "Alertmanager status" "http://localhost:9093/api/v2/status" 6 5 "fail"
 
 print_prometheus_targets
+check_prometheus_rules
+check_prometheus_alerts_endpoint
+check_discord_config
 print_loki_labels
 check_loki_query '{job="sentinelstack"}'
 check_loki_query '{service="backend"}'

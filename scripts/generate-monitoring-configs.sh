@@ -42,11 +42,30 @@ DISCORD_WEBHOOK_URL="${DISCORD_WEBHOOK_URL:-$(read_env_value DISCORD_WEBHOOK_URL
 
 if [ -n "${DISCORD_WEBHOOK_URL}" ]; then
   ALERTMANAGER_RECEIVER_NAME="discord"
-  ALERTMANAGER_RECEIVER_CONFIG="    discord_configs:
-      - webhook_url: \"${DISCORD_WEBHOOK_URL}\"
+  ALERTMANAGER_RECEIVER_CONFIG="$(cat <<EOF
+    discord_configs:
+      - webhook_url: "${DISCORD_WEBHOOK_URL}"
         send_resolved: true
-        title: '{{ .CommonLabels.alertname }}'
-        message: '{{ range .Alerts }}{{ .Annotations.summary }} - {{ .Annotations.description }}{{ \"\\n\" }}{{ end }}'"
+        title: '[{{ .Status }}] SentinelStack: {{ .CommonLabels.alertname }}'
+        message: |-
+          {{ if eq .Status "firing" }}FIRING alerts{{ else }}RESOLVED alerts{{ end }}: {{ len .Alerts }}
+
+          {{ range .Alerts }}
+          Alert: {{ .Labels.alertname }}
+          Severity: {{ .Labels.severity }}
+          Status: {{ .Status }}
+          Service: {{ .Labels.service }}
+          Category: {{ .Labels.category }}
+          Job: {{ .Labels.job }}
+          Instance: {{ .Labels.instance }}
+          Summary: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Started: {{ .StartsAt }}
+          Dashboard: {{ .Annotations.dashboard }}
+          Runbook: {{ .Annotations.runbook }}
+          {{ end }}
+EOF
+)"
   echo "Generating Alertmanager config with Discord receiver enabled."
 else
   ALERTMANAGER_RECEIVER_NAME="default-receiver"

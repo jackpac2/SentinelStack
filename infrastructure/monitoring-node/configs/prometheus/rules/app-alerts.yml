@@ -1,50 +1,97 @@
 groups:
-  - name: sentinelstack-app
+  - name: sentinelstack-app-alerts
     rules:
-      - alert: SentinelStackBackendDown
+      - alert: BackendDown
         expr: up{job="sentinelstack-backend"} == 0
         for: 1m
         labels:
           severity: critical
           service: backend
+          category: availability
         annotations:
-          summary: SentinelStack backend is down
-          description: Prometheus cannot scrape the backend /metrics endpoint on {{ $labels.instance }}.
+          summary: Backend is down
+          description: Prometheus cannot scrape the backend metrics endpoint through app-node nginx at {{ $labels.instance }}.
+          dashboard: SentinelStack - Backend API Observability
+          runbook: docs/alert-testing.md#backenddown
 
-      - alert: SentinelStackHighErrorRate
-        expr: |
-          sum(rate(http_requests_total{job="sentinelstack-backend",status_code=~"5.."}[5m]))
-          /
-          clamp_min(sum(rate(http_requests_total{job="sentinelstack-backend"}[5m])), 1)
-          > 0.05
-        for: 5m
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{job="sentinelstack-node-exporter",mode="idle"}[2m])) * 100) > 70
+        for: 2m
         labels:
           severity: warning
-          service: backend
+          service: app-node
+          category: infrastructure
         annotations:
-          summary: SentinelStack backend 5xx rate is high
-          description: More than 5% of backend requests are returning 5xx responses.
+          summary: App node CPU usage is high
+          description: CPU usage on {{ $labels.instance }} has been above 70% for 2 minutes.
+          dashboard: SentinelStack - App Node Metrics
+          runbook: docs/alert-testing.md#highcpuusage
 
-      - alert: SentinelStackHighP95Latency
+      - alert: HighMemoryUsage
+        expr: 100 * (1 - (node_memory_MemAvailable_bytes{job="sentinelstack-node-exporter"} / node_memory_MemTotal_bytes{job="sentinelstack-node-exporter"})) > 80
+        for: 2m
+        labels:
+          severity: warning
+          service: app-node
+          category: infrastructure
+        annotations:
+          summary: App node memory usage is high
+          description: Memory usage on {{ $labels.instance }} has been above 80% for 2 minutes.
+          dashboard: SentinelStack - App Node Metrics
+          runbook: docs/alert-testing.md#highmemoryusage
+
+      - alert: HighDiskUsage
+        expr: 100 * (1 - (node_filesystem_avail_bytes{job="sentinelstack-node-exporter",fstype!~"tmpfs|overlay|squashfs"} / node_filesystem_size_bytes{job="sentinelstack-node-exporter",fstype!~"tmpfs|overlay|squashfs"})) > 85
+        for: 2m
+        labels:
+          severity: warning
+          service: app-node
+          category: infrastructure
+        annotations:
+          summary: App node disk usage is high
+          description: Disk usage for {{ $labels.mountpoint }} on {{ $labels.instance }} has been above 85% for 2 minutes.
+          dashboard: SentinelStack - App Node Metrics
+          runbook: docs/alert-testing.md#highdiskusage
+
+      - alert: HighLatency
         expr: |
           histogram_quantile(
             0.95,
-            sum(rate(http_request_duration_seconds_bucket{job="sentinelstack-backend"}[5m])) by (le)
-          ) > 1
-        for: 5m
-        labels:
-          severity: warning
-          service: backend
-        annotations:
-          summary: SentinelStack backend p95 latency is high
-          description: Backend p95 request latency is above 1 second.
-
-      - alert: SentinelStackCadvisorDown
-        expr: up{job="sentinelstack-cadvisor"} == 0
+            sum(rate(http_request_duration_seconds_bucket{job="sentinelstack-backend"}[2m])) by (le)
+          ) > 0.8
         for: 1m
         labels:
           severity: warning
-          service: cadvisor
+          service: backend
+          category: latency
         annotations:
-          summary: SentinelStack cAdvisor is down
-          description: Prometheus cannot scrape cAdvisor metrics on {{ $labels.instance }}.
+          summary: Backend p95 latency is high
+          description: Backend p95 request latency has been above 800ms for 1 minute.
+          dashboard: SentinelStack - Backend API Observability
+          runbook: docs/alert-testing.md#highlatency
+
+      - alert: High5xxRate
+        expr: sum(rate(http_requests_total{job="sentinelstack-backend",status_code=~"5.."}[2m])) > 0.05
+        for: 1m
+        labels:
+          severity: warning
+          service: backend
+          category: errors
+        annotations:
+          summary: Backend 5xx error rate is high
+          description: Backend 5xx responses are above 0.05 requests/second for 1 minute.
+          dashboard: SentinelStack - Backend API Observability
+          runbook: docs/alert-testing.md#high5xxrate
+
+      - alert: ContainerRestart
+        expr: changes(container_start_time_seconds{job="sentinelstack-cadvisor",name!=""}[5m]) > 0
+        for: 30s
+        labels:
+          severity: warning
+          service: container
+          category: containers
+        annotations:
+          summary: Container restarted
+          description: Container {{ $labels.name }} on {{ $labels.instance }} restarted or was recreated in the last 5 minutes.
+          dashboard: SentinelStack - Docker Container Metrics
+          runbook: docs/alert-testing.md#containerrestart

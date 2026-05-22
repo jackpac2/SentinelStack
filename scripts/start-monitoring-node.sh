@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [ "$(id -u)" -ne 0 ]; then
+  echo "[INFO] Re-running as root with sudo."
+  exec sudo -E bash "$0" "$@"
+fi
+
 if [ "$#" -ne 1 ]; then
   echo "Usage: ./scripts/start-monitoring-node.sh <APP_HOST>"
   echo "Example: ./scripts/start-monitoring-node.sh 10.0.2.45"
@@ -79,7 +84,7 @@ ENV_EXAMPLE="${REPO_ROOT}/infrastructure/monitoring-node/.env.example"
 
 cd "${REPO_ROOT}"
 
-chmod +x "${REPO_ROOT}/scripts/install-dependencies.sh" 2>/dev/null || true
+chmod +x "${REPO_ROOT}"/scripts/*.sh 2>/dev/null || true
 "${REPO_ROOT}/scripts/install-dependencies.sh"
 
 if [ ! -f "${ENV_FILE}" ]; then

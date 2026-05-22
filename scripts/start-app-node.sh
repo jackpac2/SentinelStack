@@ -10,18 +10,27 @@ fi
 MONITORING_HOST="$1"
 export MONITORING_HOST
 
-info() {
-  echo "[INFO] $1"
+COLOR_INFO="\033[0;36m"
+COLOR_WARN="\033[0;33m"
+COLOR_FATAL="\033[0;31m"
+COLOR_RESET="\033[0m"
+
+log_info() {
+  printf "%b[INFO]%b %s\n" "${COLOR_INFO}" "${COLOR_RESET}" "$1"
 }
 
-warn() {
-  echo "[WARN] $1"
+log_warn() {
+  printf "%b[WARN]%b %s\n" "${COLOR_WARN}" "${COLOR_RESET}" "$1"
 }
 
-fatal() {
-  echo "[FATAL] $1"
+log_fatal() {
+  printf "%b[FATAL]%b %s\n" "${COLOR_FATAL}" "${COLOR_RESET}" "$1" >&2
   exit 1
 }
+
+info() { log_info "$1"; }
+warn() { log_warn "$1"; }
+fatal() { log_fatal "$1"; }
 
 sync_repo_if_available() {
   local repo_root="$1"
@@ -68,6 +77,42 @@ sync_repo_if_available() {
   else
     info "Repo updated from ${before_sha} to ${after_sha}"
   fi
+}
+
+user_is_listed_in_docker_group() {
+  getent group docker 2>/dev/null | awk -F: '{print $4}' | tr ',' '\n' | grep -qx "$(id -un)"
+}
+
+ensure_docker_access() {
+  # Linux calculates supplementary groups when the user logs in. If this script
+  # just added ubuntu to the docker group, the current SSH session may still not
+  # have the docker group until the user reconnects or starts a new group shell.
+  if docker ps >/dev/null 2>&1; then
+    DOCKER_COMPOSE=(docker compose)
+    log_info "Docker access validated for user $(id -un)."
+    return 0
+  fi
+
+  if user_is_listed_in_docker_group; then
+    log_warn "User $(id -un) is listed in the docker group, but this SSH session has not picked up that group yet."
+
+    if [ "${SENTINELSTACK_NEWGRP_ATTEMPTED:-0}" != "1" ] && command -v newgrp >/dev/null 2>&1; then
+      log_warn "Attempting to refresh group membership with: newgrp docker"
+      SENTINELSTACK_NEWGRP_ATTEMPTED=1 newgrp docker <<EOF
+cd "${REPO_ROOT}"
+export SENTINELSTACK_NEWGRP_ATTEMPTED=1
+export MONITORING_HOST="${MONITORING_HOST}"
+export GHCR_OWNER="${GHCR_OWNER:-}"
+export IMAGE_TAG="${IMAGE_TAG:-}"
+bash "${SCRIPT_DIR}/start-app-node.sh" "${MONITORING_HOST}"
+EOF
+      exit $?
+    fi
+
+    log_fatal "Docker is still not reachable after attempting group refresh. Reconnect SSH so Linux reloads docker group membership, then rerun ./scripts/start-app-node.sh ${MONITORING_HOST}."
+  fi
+
+  log_fatal "Docker is not reachable for user $(id -un). Add the user to the docker group, reconnect SSH, and rerun the script."
 }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -129,15 +174,7 @@ info "Generating app config for MONITORING_HOST=${MONITORING_HOST}"
 "${REPO_ROOT}/scripts/generate-app-configs.sh"
 
 info "Starting app node stack"
-if docker ps >/dev/null 2>&1; then
-  DOCKER_COMPOSE=(docker compose)
-else
-  if getent group docker | awk -F: '{print $4}' | tr ',' '\n' | grep -qx "$(id -un)"; then
-    fatal "User $(id -un) is in the docker group, but this SSH session has not picked it up yet. Reconnect SSH and run again."
-  fi
-
-  fatal "Docker is not reachable for user $(id -un). Add the user to the docker group, reconnect SSH, and run again."
-fi
+ensure_docker_access
 
 "${DOCKER_COMPOSE[@]}" \
   --env-file infrastructure/app-node/.env \

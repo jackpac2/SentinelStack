@@ -23,9 +23,7 @@ The repository is designed as a practical DevOps portfolio project. It includes 
 
 ## Architecture Diagram
 
-<!-- Add your architecture diagram here. -->
-
-<br><br><br><br><br><br>
+![SentinelStack architecture diagram](screenshots/SentinelStack%20Architecture%20-%20CloudStore%20Monitoring%20and%20Incident%20Detection%20Platform.png)
 
 ## Architecture Overview
 
@@ -500,5 +498,4 @@ Throughout this project, I learned how to:
   * Alertmanager for alert routing and notifications
 * Design and test alerting rules for scenarios such as high CPU usage, high memory usage, container restarts, increased latency, and elevated error rates.
 * Write incident reports to document issues, identify root causes, record resolutions, and prevent similar incidents from occurring in the future.
-
 

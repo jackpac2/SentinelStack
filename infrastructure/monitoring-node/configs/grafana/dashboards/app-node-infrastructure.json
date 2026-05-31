@@ -4,7 +4,7 @@
   "tags": ["sentinelstack", "devops", "observability"],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "refresh": "10s",
   "time": { "from": "now-1h", "to": "now" },
   "editable": true,
@@ -15,9 +15,9 @@
       "type": "stat",
       "datasource": { "type": "prometheus", "uid": "Prometheus" },
       "gridPos": { "h": 5, "w": 8, "x": 0, "y": 0 },
-      "fieldConfig": { "defaults": { "unit": "percent", "decimals": 1, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 70 }, { "color": "red", "value": 90 }] } }, "overrides": [] },
+      "fieldConfig": { "defaults": { "unit": "percent", "decimals": 1, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 70 }] } }, "overrides": [] },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "textMode": "auto" },
-      "targets": [{ "expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)", "legendFormat": "{{ instance }}", "refId": "A" }]
+      "targets": [{ "expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{job=\"sentinelstack-node-exporter\",mode=\"idle\"}[2m])) * 100)", "legendFormat": "{{ instance }}", "refId": "A" }]
     },
     {
       "id": 2,
@@ -25,9 +25,9 @@
       "type": "stat",
       "datasource": { "type": "prometheus", "uid": "Prometheus" },
       "gridPos": { "h": 5, "w": 8, "x": 8, "y": 0 },
-      "fieldConfig": { "defaults": { "unit": "percent", "decimals": 1, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 75 }, { "color": "red", "value": 90 }] } }, "overrides": [] },
+      "fieldConfig": { "defaults": { "unit": "percent", "decimals": 1, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 80 }] } }, "overrides": [] },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "textMode": "auto" },
-      "targets": [{ "expr": "100 * (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes))", "legendFormat": "{{ instance }}", "refId": "A" }]
+      "targets": [{ "expr": "100 * (1 - (node_memory_MemAvailable_bytes{job=\"sentinelstack-node-exporter\"} / node_memory_MemTotal_bytes{job=\"sentinelstack-node-exporter\"}))", "legendFormat": "{{ instance }}", "refId": "A" }]
     },
     {
       "id": 3,
@@ -35,9 +35,9 @@
       "type": "stat",
       "datasource": { "type": "prometheus", "uid": "Prometheus" },
       "gridPos": { "h": 5, "w": 8, "x": 16, "y": 0 },
-      "fieldConfig": { "defaults": { "unit": "percent", "decimals": 1, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 75 }, { "color": "red", "value": 90 }] } }, "overrides": [] },
+      "fieldConfig": { "defaults": { "unit": "percent", "decimals": 1, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 85 }] } }, "overrides": [] },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "textMode": "auto" },
-      "targets": [{ "expr": "100 * (1 - (node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay\"} / node_filesystem_size_bytes{fstype!~\"tmpfs|overlay\"}))", "legendFormat": "{{ mountpoint }}", "refId": "A" }]
+      "targets": [{ "expr": "100 * (1 - (node_filesystem_avail_bytes{job=\"sentinelstack-node-exporter\",fstype!~\"tmpfs|overlay|squashfs\"} / node_filesystem_size_bytes{job=\"sentinelstack-node-exporter\",fstype!~\"tmpfs|overlay|squashfs\"}))", "legendFormat": "{{ mountpoint }}", "refId": "A" }]
     },
     {
       "id": 4,

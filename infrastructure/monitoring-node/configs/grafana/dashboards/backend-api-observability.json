@@ -4,7 +4,7 @@
   "tags": ["sentinelstack", "devops", "observability"],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 2,
+  "version": 3,
   "refresh": "10s",
   "time": { "from": "now-1h", "to": "now" },
   "editable": true,
@@ -17,7 +17,7 @@
       "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
       "fieldConfig": { "defaults": { "decimals": 0, "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] } }, "overrides": [] },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "textMode": "auto" },
-      "targets": [{ "expr": "up{job=~\".*backend.*\"}", "legendFormat": "{{ instance }}", "refId": "A" }]
+      "targets": [{ "expr": "up{job=\"sentinelstack-backend\"}", "legendFormat": "{{ instance }}", "refId": "A" }]
     },
     {
       "id": 2,
@@ -34,10 +34,9 @@
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "Prometheus" },
       "gridPos": { "h": 5, "w": 9, "x": 15, "y": 0 },
-      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "fieldConfig": { "defaults": { "unit": "reqps", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 0.05 }] } }, "overrides": [] },
       "targets": [
-        { "expr": "sum(rate(http_requests_total{status_code=~\"5..\"}[5m]))", "legendFormat": "status_code 5xx", "refId": "A" },
-        { "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m]))", "legendFormat": "status 5xx fallback", "refId": "B" }
+        { "expr": "sum(rate(http_requests_total{job=\"sentinelstack-backend\",status_code=~\"5..\"}[2m]))", "legendFormat": "status_code 5xx", "refId": "A" }
       ]
     },
     {
@@ -79,8 +78,8 @@
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "Prometheus" },
       "gridPos": { "h": 7, "w": 12, "x": 0, "y": 12 },
-      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
-      "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "p95", "refId": "A" }]
+      "fieldConfig": { "defaults": { "unit": "s", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 0.8 }] } }, "overrides": [] },
+      "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"sentinelstack-backend\"}[2m])) by (le))", "legendFormat": "p95", "refId": "A" }]
     },
     {
       "id": 8,

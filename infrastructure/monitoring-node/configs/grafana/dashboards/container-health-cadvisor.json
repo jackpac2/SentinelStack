@@ -4,7 +4,7 @@
   "tags": ["sentinelstack", "devops", "observability"],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "refresh": "10s",
   "time": { "from": "now-1h", "to": "now" },
   "editable": true,
@@ -80,6 +80,16 @@
       "gridPos": { "h": 7, "w": 8, "x": 16, "y": 16 },
       "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
       "targets": [{ "expr": "topk(5, container_memory_usage_bytes{name!=\"\"})", "format": "table", "instant": true, "refId": "A" }]
+    },
+    {
+      "id": 9,
+      "title": "Container Restarts Detected",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "gridPos": { "h": 5, "w": 8, "x": 0, "y": 23 },
+      "fieldConfig": { "defaults": { "decimals": 0, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "textMode": "auto" },
+      "targets": [{ "expr": "sum(changes(container_start_time_seconds{job=\"sentinelstack-cadvisor\",name!=\"\"}[5m]))", "legendFormat": "restarts in last 5m", "refId": "A" }]
     }
   ]
 }

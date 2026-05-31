@@ -2,6 +2,8 @@ global:
   resolve_timeout: 5m
 
 route:
+  # Every alert enters this root route. The generator selects the Discord
+  # receiver when DISCORD_WEBHOOK_URL is configured.
   receiver: ${ALERTMANAGER_RECEIVER_NAME}
   group_by:
     - alertname
@@ -11,9 +13,11 @@ route:
 
 receivers:
   - name: ${ALERTMANAGER_RECEIVER_NAME}
+    # The generator injects discord_configs here without committing the webhook
+    # secret. When the secret is empty, this remains a valid no-op receiver.
 ${ALERTMANAGER_RECEIVER_CONFIG}
 
 # Discord support:
-# Alertmanager latest supports discord_configs.
+# Alertmanager supports discord_configs natively.
 # Set DISCORD_WEBHOOK_URL in infrastructure/monitoring-node/.env to enable it.
 # Leave DISCORD_WEBHOOK_URL empty to generate the default no-op receiver.

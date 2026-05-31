@@ -458,3 +458,47 @@ This deletes persisted PostgreSQL, Prometheus, Loki, Grafana, Alertmanager, and 
 - The deployment uses a single app node and a single monitoring node without high availability.
 - High traffic is visible in Grafana, but there is not yet a dedicated `HighTraffic` Prometheus alert.
 - The backend package currently does not define an automated test script, so CI skips backend tests until one is added.
+
+## What I Learned
+
+### High-Level Lessons
+
+This project taught me that deploying an application is only part of running a production system. Equally important is maintaining visibility into the system through monitoring, logging, and alerting.
+
+By implementing a complete observability stack, I learned how to:
+
+* Monitor system health and reliability through metrics, logs, and alerts.
+* Detect issues such as high CPU usage, memory pressure, application errors, and service outages before they become major incidents.
+* Investigate problems using centralized dashboards and logs rather than manually checking servers.
+* Improve operational reliability by receiving alerts automatically instead of constantly monitoring dashboards.
+* Understand the importance of observability as a core component of modern DevOps practices.
+
+### Technical Skills Gained
+
+Throughout this project, I learned how to:
+
+* Deploy and configure a complete monitoring stack using Grafana, Prometheus, Loki, and Alertmanager.
+* Configure Node Exporter, cAdvisor, and Promtail on the application node to collect host, container, and log data.
+* Build dashboards and data sources programmatically using JSON provisioning.
+* Configure AWS Security Groups to allow secure communication between monitoring and application nodes.
+* Automate infrastructure startup using Docker Compose and startup scripts for both EC2 instances.
+* Create Bash scripts to validate prerequisites and automate testing scenarios.
+* Implement CI/CD pipelines using GitHub Actions to:
+
+  * Build Docker images
+  * Validate deployments
+  * Connect to EC2 instances via SSH
+  * Deploy services automatically using Docker Compose
+* Use `envsubst` and configuration templates to dynamically inject environment variables into configuration files at runtime.
+* Understand the purpose and operation of:
+
+  * Prometheus for metrics collection
+  * Grafana for visualization
+  * Loki for log aggregation
+  * Promtail for log shipping
+  * cAdvisor for container monitoring
+  * Alertmanager for alert routing and notifications
+* Design and test alerting rules for scenarios such as high CPU usage, high memory usage, container restarts, increased latency, and elevated error rates.
+* Write incident reports to document issues, identify root causes, record resolutions, and prevent similar incidents from occurring in the future.
+
+
